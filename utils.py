@@ -1,0 +1,311 @@
+import pandas as pd
+import numpy as np
+from sklearn import preprocessing
+import base64
+import io
+import matplotlib.pyplot as plt
+import plotly.express as px
+import streamlit as st
+
+def load_data(file):
+    """
+    Load data from uploaded file
+    
+    Args:
+        file: The uploaded file object
+    
+    Returns:
+        pandas DataFrame containing the data
+    """
+    filename = file.name
+    
+    try:
+        if filename.endswith('.csv'):
+            data = pd.read_csv(file)
+        elif filename.endswith(('.xls', '.xlsx')):
+            data = pd.read_excel(file)
+        else:
+            st.error("Unsupported file format. Please upload a CSV or Excel file.")
+            return None, None
+        
+        return data, filename
+    except Exception as e:
+        st.error(f"Error loading file: {str(e)}")
+        return None, None
+
+def get_column_types(df):
+    """
+    Determine column types from DataFrame
+    
+    Args:
+        df: pandas DataFrame
+    
+    Returns:
+        lists of column names by type
+    """
+    if df is None:
+        return [], [], []
+    
+    columns = df.columns.tolist()
+    numeric_columns = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
+    categorical_columns = df.select_dtypes(include=['object', 'category']).columns.tolist()
+    
+    # Also include boolean and datetime columns as categorical
+    bool_columns = df.select_dtypes(include=['bool']).columns.tolist()
+    date_columns = df.select_dtypes(include=['datetime64']).columns.tolist()
+    
+    categorical_columns = categorical_columns + bool_columns + date_columns
+    
+    return columns, numeric_columns, categorical_columns
+
+def calculate_basic_stats(df, column):
+    """
+    Calculate basic statistics for a numeric column
+    
+    Args:
+        df: pandas DataFrame
+        column: name of the column to analyze
+    
+    Returns:
+        dictionary of statistics
+    """
+    if column not in df.columns or df[column].dtype not in ['int64', 'float64']:
+        return None
+    
+    stats = {
+        'mean': df[column].mean(),
+        'median': df[column].median(),
+        'std': df[column].std(),
+        'min': df[column].min(),
+        'max': df[column].max(),
+        'count': df[column].count(),
+        'missing': df[column].isna().sum()
+    }
+    
+    # Add mode if it exists (might be multiple values)
+    mode_values = df[column].mode().tolist()
+    if mode_values:
+        stats['mode'] = mode_values[0] if len(mode_values) == 1 else mode_values
+    
+    # Calculate percentiles
+    stats['25%'] = df[column].quantile(0.25)
+    stats['75%'] = df[column].quantile(0.75)
+    stats['IQR'] = stats['75%'] - stats['25%']
+    
+    return stats
+
+def calculate_group_stats(df, numeric_column, groupby_column):
+    """
+    Calculate group statistics
+    
+    Args:
+        df: pandas DataFrame
+        numeric_column: name of the numeric column to analyze
+        groupby_column: name of the column to group by
+    
+    Returns:
+        DataFrame with group statistics
+    """
+    if not all(col in df.columns for col in [numeric_column, groupby_column]):
+        return None
+    
+    grouped = df.groupby(groupby_column)[numeric_column].agg([
+        'count', 'mean', 'median', 'std', 'min', 'max'
+    ]).reset_index()
+    
+    return grouped
+
+def filter_dataframe(df, filters):
+    """
+    Filter dataframe based on conditions
+    
+    Args:
+        df: pandas DataFrame
+        filters: list of filter conditions
+    
+    Returns:
+        filtered DataFrame
+    """
+    if not filters:
+        return df
+    
+    filtered_df = df.copy()
+    
+    for column, operator, value in filters:
+        if operator == "equals":
+            filtered_df = filtered_df[filtered_df[column] == value]
+        elif operator == "not equals":
+            filtered_df = filtered_df[filtered_df[column] != value]
+        elif operator == "greater than":
+            filtered_df = filtered_df[filtered_df[column] > value]
+        elif operator == "less than":
+            filtered_df = filtered_df[filtered_df[column] < value]
+        elif operator == "contains":
+            filtered_df = filtered_df[filtered_df[column].astype(str).str.contains(str(value), na=False)]
+    
+    return filtered_df
+
+def get_download_link(df, filename, file_format="csv"):
+    """
+    Generate a download link for the dataframe
+    
+    Args:
+        df: pandas DataFrame
+        filename: name of the file
+        file_format: format to export (csv, excel, json)
+    
+    Returns:
+        HTML link for downloading the file
+    """
+    if file_format == "csv":
+        csv = df.to_csv(index=False)
+        b64 = base64.b64encode(csv.encode()).decode()
+        file_ext = "csv"
+        mime_type = "text/csv"
+    elif file_format == "excel":
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Sheet1')
+        buffer.seek(0)
+        b64 = base64.b64encode(buffer.read()).decode()
+        file_ext = "xlsx"
+        mime_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    elif file_format == "json":
+        json_str = df.to_json(orient="records")
+        b64 = base64.b64encode(json_str.encode()).decode()
+        file_ext = "json"
+        mime_type = "application/json"
+    else:
+        return None
+    
+    href = f'<a href="data:{mime_type};base64,{b64}" download="{filename}.{file_ext}">Download {file_ext.upper()} File</a>'
+    return href
+
+def create_matplotlib_figure(df, plot_type, x_col, y_col, hue=None, title="Plot"):
+    """
+    Create a matplotlib figure based on plot type
+    
+    Args:
+        df: pandas DataFrame
+        plot_type: type of plot to create
+        x_col: column for x-axis
+        y_col: column for y-axis
+        hue: column for color grouping
+        title: plot title
+    
+    Returns:
+        matplotlib figure
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    if plot_type == "bar":
+        if hue:
+            groups = df.groupby([x_col, hue])[y_col].mean().unstack()
+            groups.plot(kind='bar', ax=ax)
+        else:
+            df.groupby(x_col)[y_col].mean().plot(kind='bar', ax=ax)
+    
+    elif plot_type == "line":
+        if hue:
+            for name, group in df.groupby(hue):
+                group.plot(x=x_col, y=y_col, kind='line', ax=ax, label=name)
+        else:
+            df.plot(x=x_col, y=y_col, kind='line', ax=ax)
+    
+    elif plot_type == "scatter":
+        if hue:
+            for name, group in df.groupby(hue):
+                ax.scatter(group[x_col], group[y_col], label=name, alpha=0.7)
+            ax.legend()
+        else:
+            ax.scatter(df[x_col], df[y_col], alpha=0.7)
+    
+    elif plot_type == "histogram":
+        ax.hist(df[x_col], bins=20, alpha=0.7)
+    
+    elif plot_type == "box":
+        if hue:
+            df.boxplot(column=y_col, by=x_col, ax=ax)
+        else:
+            df.boxplot(column=y_col, ax=ax)
+    
+    ax.set_title(title)
+    ax.set_xlabel(x_col)
+    if y_col and plot_type != "histogram":
+        ax.set_ylabel(y_col)
+    
+    plt.tight_layout()
+    return fig
+
+def create_plotly_figure(df, plot_type, x_col, y_col, color=None, title="Plot"):
+    """
+    Create a plotly figure based on plot type
+    
+    Args:
+        df: pandas DataFrame
+        plot_type: type of plot to create
+        x_col: column for x-axis
+        y_col: column for y-axis
+        color: column for color grouping
+        title: plot title
+    
+    Returns:
+        plotly figure
+    """
+    if plot_type == "bar":
+        fig = px.bar(df, x=x_col, y=y_col, color=color, title=title)
+    
+    elif plot_type == "line":
+        fig = px.line(df, x=x_col, y=y_col, color=color, title=title)
+    
+    elif plot_type == "scatter":
+        fig = px.scatter(df, x=x_col, y=y_col, color=color, title=title)
+    
+    elif plot_type == "histogram":
+        fig = px.histogram(df, x=x_col, color=color, title=title)
+    
+    elif plot_type == "box":
+        fig = px.box(df, x=x_col, y=y_col, color=color, title=title)
+    
+    elif plot_type == "pie":
+        fig = px.pie(df, names=x_col, values=y_col, title=title)
+    
+    elif plot_type == "heatmap":
+        pivot_df = df.pivot_table(values=y_col, index=x_col, columns=color, aggfunc='mean')
+        fig = px.imshow(pivot_df, title=title)
+    
+    else:
+        return None
+    
+    fig.update_layout(title=title)
+    return fig
+
+def normalize_data(df, columns, method='minmax'):
+    """
+    Normalize selected columns in the dataframe
+    
+    Args:
+        df: pandas DataFrame
+        columns: list of columns to normalize
+        method: normalization method ('minmax', 'zscore', 'robust')
+    
+    Returns:
+        DataFrame with normalized columns
+    """
+    result_df = df.copy()
+    
+    for col in columns:
+        if col in df.columns and df[col].dtype in ['int64', 'float64']:
+            if method == 'minmax':
+                scaler = preprocessing.MinMaxScaler()
+            elif method == 'zscore':
+                scaler = preprocessing.StandardScaler()
+            elif method == 'robust':
+                scaler = preprocessing.RobustScaler()
+            else:
+                continue
+                
+            # Reshape and fit transform
+            result_df[f"{col}_normalized"] = scaler.fit_transform(df[col].values.reshape(-1, 1))
+    
+    return result_df
