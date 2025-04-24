@@ -133,14 +133,14 @@ def calculate_group_stats(df, numeric_column, groupby_column):
 
 def filter_dataframe(df, filters):
     """
-    Filter dataframe based on conditions
+    Filtra o dataframe com base em condições
     
     Args:
         df: pandas DataFrame
-        filters: list of filter conditions
+        filters: lista de condições de filtro
     
     Returns:
-        filtered DataFrame
+        DataFrame filtrado
     """
     if not filters:
         return df
@@ -148,30 +148,30 @@ def filter_dataframe(df, filters):
     filtered_df = df.copy()
     
     for column, operator, value in filters:
-        if operator == "equals":
+        if operator == "equals" or operator == "igual a":
             filtered_df = filtered_df[filtered_df[column] == value]
-        elif operator == "not equals":
+        elif operator == "not equals" or operator == "diferente de":
             filtered_df = filtered_df[filtered_df[column] != value]
-        elif operator == "greater than":
+        elif operator == "greater than" or operator == "maior que":
             filtered_df = filtered_df[filtered_df[column] > value]
-        elif operator == "less than":
+        elif operator == "less than" or operator == "menor que":
             filtered_df = filtered_df[filtered_df[column] < value]
-        elif operator == "contains":
+        elif operator == "contains" or operator == "contém":
             filtered_df = filtered_df[filtered_df[column].astype(str).str.contains(str(value), na=False)]
     
     return filtered_df
 
 def get_download_link(df, filename, file_format="csv"):
     """
-    Generate a download link for the dataframe
+    Gera um link de download para o dataframe
     
     Args:
         df: pandas DataFrame
-        filename: name of the file
-        file_format: format to export (csv, excel, json)
+        filename: nome do arquivo
+        file_format: formato de exportação (csv, excel, json)
     
     Returns:
-        HTML link for downloading the file
+        Link HTML para baixar o arquivo
     """
     if file_format == "csv":
         csv = df.to_csv(index=False)
@@ -181,7 +181,7 @@ def get_download_link(df, filename, file_format="csv"):
     elif file_format == "excel":
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Sheet1')
+            df.to_excel(writer, index=False, sheet_name='Dados')
         buffer.seek(0)
         b64 = base64.b64encode(buffer.read()).decode()
         file_ext = "xlsx"
@@ -194,23 +194,23 @@ def get_download_link(df, filename, file_format="csv"):
     else:
         return None
     
-    href = f'<a href="data:{mime_type};base64,{b64}" download="{filename}.{file_ext}">Download {file_ext.upper()} File</a>'
+    href = f'<a href="data:{mime_type};base64,{b64}" download="{filename}.{file_ext}">Baixar Arquivo {file_ext.upper()}</a>'
     return href
 
-def create_matplotlib_figure(df, plot_type, x_col, y_col, hue=None, title="Plot"):
+def create_matplotlib_figure(df, plot_type, x_col, y_col, hue=None, title="Gráfico"):
     """
-    Create a matplotlib figure based on plot type
+    Cria uma figura matplotlib com base no tipo de gráfico
     
     Args:
         df: pandas DataFrame
-        plot_type: type of plot to create
-        x_col: column for x-axis
-        y_col: column for y-axis
-        hue: column for color grouping
-        title: plot title
+        plot_type: tipo de gráfico a ser criado
+        x_col: coluna para o eixo x
+        y_col: coluna para o eixo y
+        hue: coluna para agrupamento por cor
+        title: título do gráfico
     
     Returns:
-        matplotlib figure
+        figura matplotlib
     """
     fig, ax = plt.subplots(figsize=(10, 6))
     
@@ -253,20 +253,20 @@ def create_matplotlib_figure(df, plot_type, x_col, y_col, hue=None, title="Plot"
     plt.tight_layout()
     return fig
 
-def create_plotly_figure(df, plot_type, x_col, y_col, color=None, title="Plot"):
+def create_plotly_figure(df, plot_type, x_col, y_col, color=None, title="Gráfico"):
     """
-    Create a plotly figure based on plot type
+    Cria uma figura plotly com base no tipo de gráfico
     
     Args:
         df: pandas DataFrame
-        plot_type: type of plot to create
-        x_col: column for x-axis
-        y_col: column for y-axis
-        color: column for color grouping
-        title: plot title
+        plot_type: tipo de gráfico a ser criado
+        x_col: coluna para o eixo x
+        y_col: coluna para o eixo y
+        color: coluna para agrupamento por cor
+        title: título do gráfico
     
     Returns:
-        plotly figure
+        figura plotly
     """
     if plot_type == "bar":
         fig = px.bar(df, x=x_col, y=y_col, color=color, title=title)
@@ -298,15 +298,15 @@ def create_plotly_figure(df, plot_type, x_col, y_col, color=None, title="Plot"):
 
 def normalize_data(df, columns, method='minmax'):
     """
-    Normalize selected columns in the dataframe
+    Normaliza colunas selecionadas no dataframe
     
     Args:
         df: pandas DataFrame
-        columns: list of columns to normalize
-        method: normalization method ('minmax', 'zscore', 'robust')
+        columns: lista de colunas para normalizar
+        method: método de normalização ('minmax', 'zscore', 'robust')
     
     Returns:
-        DataFrame with normalized columns
+        DataFrame com colunas normalizadas
     """
     result_df = df.copy()
     
