@@ -3,15 +3,15 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
-# Set up page configuration
+# Configuração da página
 st.set_page_config(
-    page_title="Data Analysis App",
+    page_title="Aplicativo de Análise de Dados",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Initialize session state variables if they don't exist
+# Inicialização das variáveis de estado da sessão
 if 'data' not in st.session_state:
     st.session_state.data = None
 if 'filename' not in st.session_state:
@@ -23,66 +23,66 @@ if 'numeric_columns' not in st.session_state:
 if 'categorical_columns' not in st.session_state:
     st.session_state.categorical_columns = []
 
-# Main page header
-st.title("📊 Data Analysis and Visualization App")
+# Cabeçalho da página principal
+st.title("📊 Aplicativo de Análise e Visualização de Dados")
 st.markdown("""
-This application allows you to upload, analyze, visualize, and export data.
-Use the sidebar to navigate through different sections.
+Este aplicativo permite carregar, analisar, visualizar e exportar dados.
+Use a barra lateral para navegar pelas diferentes seções.
 """)
 
-# Check if data is loaded
+# Verificar se os dados foram carregados
 if st.session_state.data is not None:
-    st.success(f"Data loaded: {st.session_state.filename}")
+    st.success(f"Dados carregados: {st.session_state.filename}")
     
-    # Display sample data
-    st.subheader("Sample Data")
+    # Exibir amostra de dados
+    st.subheader("Amostra de Dados")
     st.dataframe(st.session_state.data.head(10))
     
-    # Display data information
-    st.subheader("Data Information")
+    # Exibir informações sobre os dados
+    st.subheader("Informações dos Dados")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Rows", st.session_state.data.shape[0])
+        st.metric("Linhas", st.session_state.data.shape[0])
     with col2:
-        st.metric("Columns", st.session_state.data.shape[1])
+        st.metric("Colunas", st.session_state.data.shape[1])
     with col3:
-        st.metric("Missing Values", st.session_state.data.isna().sum().sum())
+        st.metric("Valores Ausentes", st.session_state.data.isna().sum().sum())
     
-    # Provide links to other sections if data is loaded
-    st.subheader("What would you like to do?")
+    # Fornecer links para outras seções se os dados estiverem carregados
+    st.subheader("O que você gostaria de fazer?")
     cols = st.columns(3)
     with cols[0]:
-        st.markdown("[![Analysis](https://img.shields.io/badge/Go%20to-Analysis-blue?style=for-the-badge)](Data_Analysis)")
+        st.markdown("[![Análise](https://img.shields.io/badge/Ir%20para-Análise-blue?style=for-the-badge)](Data_Analysis)")
     with cols[1]:
-        st.markdown("[![Visualization](https://img.shields.io/badge/Go%20to-Visualization-green?style=for-the-badge)](Data_Visualization)")
+        st.markdown("[![Visualização](https://img.shields.io/badge/Ir%20para-Visualização-green?style=for-the-badge)](Data_Visualization)")
     with cols[2]:
-        st.markdown("[![Export](https://img.shields.io/badge/Go%20to-Export-orange?style=for-the-badge)](Data_Export)")
+        st.markdown("[![Exportar](https://img.shields.io/badge/Ir%20para-Exportar-orange?style=for-the-badge)](Data_Export)")
 else:
-    # Instructions when no data is loaded
-    st.info("Please upload your data file using the Upload section in the sidebar.")
+    # Instruções quando não há dados carregados
+    st.info("Por favor, carregue seu arquivo de dados usando a seção Upload na barra lateral.")
     
-    # Create folder structure if it doesn't exist
+    # Criar estrutura de pastas se não existir
     Path("pages").mkdir(exist_ok=True)
     
-    # Quick demo with sample data
-    if st.button("Load Sample Data for Demo"):
+    # Demonstração rápida com dados de exemplo
+    if st.button("Carregar Dados de Exemplo para Demonstração"):
         sample_data = pd.DataFrame({
-            'Category': ['A', 'B', 'A', 'C', 'B', 'C'],
-            'Value1': [10, 20, 15, 25, 30, 35],
-            'Value2': [100, 200, 150, 250, 300, 350],
-            'Date': pd.date_range(start='2023-01-01', periods=6)
+            'Categoria': ['A', 'B', 'A', 'C', 'B', 'C'],
+            'Valor1': [10, 20, 15, 25, 30, 35],
+            'Valor2': [100, 200, 150, 250, 300, 350],
+            'Data': pd.date_range(start='2023-01-01', periods=6)
         })
         
         st.session_state.data = sample_data
-        st.session_state.filename = "sample_data.csv"
+        st.session_state.filename = "dados_exemplo.csv"
         st.session_state.columns = sample_data.columns.tolist()
         st.session_state.numeric_columns = sample_data.select_dtypes(include=['int64', 'float64']).columns.tolist()
         st.session_state.categorical_columns = sample_data.select_dtypes(include=['object', 'category']).columns.tolist()
         
-        st.success("Sample data loaded successfully!")
+        st.success("Dados de exemplo carregados com sucesso!")
         st.rerun()
 
-# Sidebar navigation
-st.sidebar.title("Navigation")
+# Navegação na barra lateral
+st.sidebar.title("Navegação")
 st.sidebar.markdown("---")
-st.sidebar.info("Upload your data and explore different sections to analyze and visualize it.")
+st.sidebar.info("Carregue seus dados e explore as diferentes seções para analisar e visualizar.")

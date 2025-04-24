@@ -4,151 +4,163 @@ import numpy as np
 import sys
 import os
 
-# Add parent directory to path to import utils
+# Adicionar diretório pai ao caminho para importar utils
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import load_data, get_column_types
 
-st.title("📤 Data Upload")
-st.markdown("Upload your data file (CSV or Excel) to get started with analysis.")
+st.title("📤 Upload de Dados")
+st.markdown("Carregue seu arquivo de dados (CSV ou Excel) para começar a análise.")
 
-# File uploader
-uploaded_file = st.file_uploader("Choose a file", type=["csv", "xlsx", "xls"])
+# Carregador de arquivos
+uploaded_file = st.file_uploader("Escolha um arquivo", type=["csv", "xlsx", "xls"])
 
-# Setup container for options
+# Configurar container para opções
 options_container = st.container()
 
 with options_container:
     if uploaded_file is not None:
-        # Load the data
+        # Carregar os dados
         data, filename = load_data(uploaded_file)
         
         if data is not None:
-            # Preview the data
-            st.subheader("Data Preview")
+            # Pré-visualização dos dados
+            st.subheader("Pré-visualização dos Dados")
             st.dataframe(data.head(5))
             
-            # Data info
-            st.subheader("Data Information")
+            # Informações dos dados
+            st.subheader("Informações dos Dados")
             
-            # Display basic info in columns
+            # Exibir informações básicas em colunas
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Rows", data.shape[0])
+                st.metric("Linhas", data.shape[0])
             with col2:
-                st.metric("Columns", data.shape[1])
+                st.metric("Colunas", data.shape[1])
             with col3:
-                st.metric("Missing Values", data.isna().sum().sum())
+                st.metric("Valores Ausentes", data.isna().sum().sum())
             
-            # Column data types
-            st.subheader("Column Data Types")
+            # Tipos de dados das colunas
+            st.subheader("Tipos de Dados das Colunas")
             dtypes_df = pd.DataFrame({
-                'Column': data.columns,
-                'Data Type': [str(data[col].dtype) for col in data.columns],
-                'Non-Null Count': [data[col].count() for col in data.columns],
-                'Missing Values': [data[col].isna().sum() for col in data.columns]
+                'Coluna': data.columns,
+                'Tipo de Dado': [str(data[col].dtype) for col in data.columns],
+                'Contagem de Não-Nulos': [data[col].count() for col in data.columns],
+                'Valores Ausentes': [data[col].isna().sum() for col in data.columns]
             })
             st.dataframe(dtypes_df)
             
-            # Data preprocessing options
-            st.subheader("Data Preprocessing Options")
+            # Opções de pré-processamento de dados
+            st.subheader("Opções de Pré-processamento")
             
             preprocess_options = st.multiselect(
-                "Select preprocessing options:",
-                ["Handle missing values", "Remove duplicates", "Convert data types"]
+                "Selecione as opções de pré-processamento:",
+                ["Tratar valores ausentes", "Remover duplicatas", "Converter tipos de dados"]
             )
             
             modified_data = data.copy()
             
-            # Handle missing values
-            if "Handle missing values" in preprocess_options:
-                st.write("Handle Missing Values")
+            # Tratar valores ausentes
+            if "Tratar valores ausentes" in preprocess_options:
+                st.write("Tratar Valores Ausentes")
                 
                 missing_cols = [col for col in data.columns if data[col].isna().any()]
                 if missing_cols:
                     for col in missing_cols:
-                        st.write(f"Column: {col} - {data[col].isna().sum()} missing values")
+                        st.write(f"Coluna: {col} - {data[col].isna().sum()} valores ausentes")
                         
                         strategy = st.selectbox(
-                            f"How to handle missing values in {col}?",
-                            ["Drop rows", "Fill with mean", "Fill with median", "Fill with mode", "Fill with value"],
+                            f"Como tratar valores ausentes em {col}?",
+                            ["Remover linhas", "Preencher com média", "Preencher com mediana", "Preencher com moda", "Preencher com valor"],
                             key=f"missing_{col}"
                         )
                         
-                        if strategy == "Drop rows":
+                        if strategy == "Remover linhas":
                             modified_data = modified_data.dropna(subset=[col])
-                        elif strategy == "Fill with mean" and pd.api.types.is_numeric_dtype(data[col]):
+                        elif strategy == "Preencher com média" and pd.api.types.is_numeric_dtype(data[col]):
                             modified_data[col] = modified_data[col].fillna(modified_data[col].mean())
-                        elif strategy == "Fill with median" and pd.api.types.is_numeric_dtype(data[col]):
+                        elif strategy == "Preencher com mediana" and pd.api.types.is_numeric_dtype(data[col]):
                             modified_data[col] = modified_data[col].fillna(modified_data[col].median())
-                        elif strategy == "Fill with mode":
+                        elif strategy == "Preencher com moda":
                             modified_data[col] = modified_data[col].fillna(modified_data[col].mode()[0])
-                        elif strategy == "Fill with value":
-                            fill_value = st.text_input(f"Enter value to fill in {col}", key=f"fill_{col}")
+                        elif strategy == "Preencher com valor":
+                            fill_value = st.text_input(f"Digite o valor para preencher em {col}", key=f"fill_{col}")
                             if fill_value:
-                                # Try to convert the fill_value to the column's data type
+                                # Tentar converter o valor para o tipo de dados da coluna
                                 try:
                                     if pd.api.types.is_numeric_dtype(data[col]):
                                         fill_value = float(fill_value)
                                     modified_data[col] = modified_data[col].fillna(fill_value)
                                 except ValueError:
-                                    st.error(f"The value could not be converted to the column's data type.")
+                                    st.error(f"O valor não pôde ser convertido para o tipo de dados da coluna.")
                 else:
-                    st.write("No missing values found in the dataset.")
+                    st.write("Não foram encontrados valores ausentes no conjunto de dados.")
             
-            # Remove duplicates
-            if "Remove duplicates" in preprocess_options:
-                st.write("Remove Duplicates")
+            # Remover duplicatas
+            if "Remover duplicatas" in preprocess_options:
+                st.write("Remover Duplicatas")
                 
                 duplicate_rows = modified_data.duplicated().sum()
                 if duplicate_rows > 0:
-                    st.write(f"Found {duplicate_rows} duplicate rows")
+                    st.write(f"Encontradas {duplicate_rows} linhas duplicadas")
                     
                     subset_cols = st.multiselect(
-                        "Select columns to consider for identifying duplicates (leave empty to use all columns):",
+                        "Selecione colunas para identificar duplicatas (deixe vazio para usar todas):",
                         modified_data.columns.tolist(),
                         key="duplicate_cols"
                     )
                     
                     keep_option = st.radio(
-                        "Which duplicate to keep?",
-                        ["first", "last", "none"],
+                        "Qual duplicata manter?",
+                        ["primeira", "última", "nenhuma"],
                         key="duplicate_keep"
                     )
                     
-                    if st.button("Remove Duplicates"):
+                    # Mapear escolhas em português para as opções em inglês
+                    keep_map = {"primeira": "first", "última": "last", "nenhuma": "none"}
+                    
+                    if st.button("Remover Duplicatas"):
                         if subset_cols:
-                            modified_data = modified_data.drop_duplicates(subset=subset_cols, keep=keep_option)
+                            modified_data = modified_data.drop_duplicates(subset=subset_cols, keep=keep_map[keep_option])
                         else:
-                            modified_data = modified_data.drop_duplicates(keep=keep_option)
-                        st.success(f"Removed {duplicate_rows} duplicate rows")
+                            modified_data = modified_data.drop_duplicates(keep=keep_map[keep_option])
+                        st.success(f"Removidas {duplicate_rows} linhas duplicadas")
                 else:
-                    st.write("No duplicate rows found in the dataset.")
+                    st.write("Não foram encontradas linhas duplicadas no conjunto de dados.")
             
-            # Convert data types
-            if "Convert data types" in preprocess_options:
-                st.write("Convert Data Types")
+            # Converter tipos de dados
+            if "Converter tipos de dados" in preprocess_options:
+                st.write("Converter Tipos de Dados")
                 
                 for col in modified_data.columns:
                     current_type = modified_data[col].dtype
-                    st.write(f"Column: {col} - Current type: {current_type}")
+                    st.write(f"Coluna: {col} - Tipo atual: {current_type}")
                     
                     target_type = st.selectbox(
-                        f"Convert {col} to:",
-                        ["Keep current", "numeric", "text", "category", "datetime"],
+                        f"Converter {col} para:",
+                        ["Manter atual", "numérico", "texto", "categoria", "data/hora"],
                         key=f"convert_{col}"
                     )
                     
-                    if target_type != "Keep current":
+                    # Mapear escolhas em português para as opções em inglês
+                    type_map = {
+                        "Manter atual": "Keep current",
+                        "numérico": "numeric", 
+                        "texto": "text", 
+                        "categoria": "category", 
+                        "data/hora": "datetime"
+                    }
+                    
+                    if target_type != "Manter atual":
                         try:
-                            if target_type == "numeric":
+                            if type_map[target_type] == "numeric":
                                 modified_data[col] = pd.to_numeric(modified_data[col], errors='coerce')
-                            elif target_type == "text":
+                            elif type_map[target_type] == "text":
                                 modified_data[col] = modified_data[col].astype(str)
-                            elif target_type == "category":
+                            elif type_map[target_type] == "category":
                                 modified_data[col] = modified_data[col].astype('category')
-                            elif target_type == "datetime":
+                            elif type_map[target_type] == "datetime":
                                 date_format = st.text_input(
-                                    f"Enter date format for {col} (e.g., '%Y-%m-%d', leave empty for auto-detection):",
+                                    f"Digite o formato da data para {col} (ex: '%Y-%m-%d', deixe vazio para detecção automática):",
                                     key=f"date_format_{col}"
                                 )
                                 if date_format:
@@ -156,48 +168,48 @@ with options_container:
                                 else:
                                     modified_data[col] = pd.to_datetime(modified_data[col], errors='coerce')
                         except Exception as e:
-                            st.error(f"Error converting {col}: {str(e)}")
+                            st.error(f"Erro ao converter {col}: {str(e)}")
             
-            # Save changes button
-            if st.button("Apply Changes and Continue"):
-                # Calculate column types
+            # Botão para salvar alterações
+            if st.button("Aplicar Alterações e Continuar"):
+                # Calcular tipos de colunas
                 columns, numeric_columns, categorical_columns = get_column_types(modified_data)
                 
-                # Update session state
+                # Atualizar estado da sessão
                 st.session_state.data = modified_data
                 st.session_state.filename = filename
                 st.session_state.columns = columns
                 st.session_state.numeric_columns = numeric_columns
                 st.session_state.categorical_columns = categorical_columns
                 
-                st.success("Data loaded successfully. You can now proceed to analysis and visualization.")
+                st.success("Dados carregados com sucesso. Agora você pode prosseguir para análise e visualização.")
                 
-                # Show sample of processed data
-                st.subheader("Processed Data Preview")
+                # Mostrar amostra dos dados processados
+                st.subheader("Pré-visualização dos Dados Processados")
                 st.dataframe(modified_data.head(5))
                 
-                # Provide navigation links
-                st.markdown("### Navigate to:")
+                # Fornecer links de navegação
+                st.markdown("### Navegar para:")
                 cols = st.columns(3)
                 with cols[0]:
-                    st.markdown("[![Analysis](https://img.shields.io/badge/Go%20to-Analysis-blue?style=for-the-badge)](Data_Analysis)")
+                    st.markdown("[![Análise](https://img.shields.io/badge/Ir%20para-Análise-blue?style=for-the-badge)](Data_Analysis)")
                 with cols[1]:
-                    st.markdown("[![Visualization](https://img.shields.io/badge/Go%20to-Visualization-green?style=for-the-badge)](Data_Visualization)")
+                    st.markdown("[![Visualização](https://img.shields.io/badge/Ir%20para-Visualização-green?style=for-the-badge)](Data_Visualization)")
                 with cols[2]:
-                    st.markdown("[![Export](https://img.shields.io/badge/Go%20to-Export-orange?style=for-the-badge)](Data_Export)")
+                    st.markdown("[![Exportar](https://img.shields.io/badge/Ir%20para-Exportar-orange?style=for-the-badge)](Data_Export)")
     else:
-        st.info("Please upload a CSV or Excel file to get started.")
+        st.info("Por favor, carregue um arquivo CSV ou Excel para começar.")
         
-        # Instructions for using the app
+        # Instruções para usar o aplicativo
         st.markdown("""
-        ### Instructions:
-        1. Upload your data file in CSV or Excel format
-        2. Preview the data and check for any issues
-        3. Apply preprocessing options if needed
-        4. Once your data is ready, click 'Apply Changes and Continue'
-        5. Navigate to other sections to analyze, visualize, and export your data
+        ### Instruções:
+        1. Carregue seu arquivo de dados em formato CSV ou Excel
+        2. Visualize os dados e verifique se há problemas
+        3. Aplique opções de pré-processamento, se necessário
+        4. Quando seus dados estiverem prontos, clique em 'Aplicar Alterações e Continuar'
+        5. Navegue para outras seções para analisar, visualizar e exportar seus dados
         
-        ### Supported File Formats:
+        ### Formatos de Arquivo Suportados:
         - CSV (.csv)
         - Excel (.xlsx, .xls)
         """)

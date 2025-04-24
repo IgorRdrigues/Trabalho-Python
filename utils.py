@@ -9,29 +9,45 @@ import streamlit as st
 
 def load_data(file):
     """
-    Load data from uploaded file
+    Carrega dados de um arquivo enviado
     
     Args:
-        file: The uploaded file object
+        file: O objeto de arquivo enviado
     
     Returns:
-        pandas DataFrame containing the data
+        DataFrame pandas contendo os dados
     """
     filename = file.name
     
     try:
         if filename.endswith('.csv'):
-            data = pd.read_csv(file)
+            data = pd.read_csv(file, encoding='utf-8', on_bad_lines='skip')
         elif filename.endswith(('.xls', '.xlsx')):
             data = pd.read_excel(file)
         else:
-            st.error("Unsupported file format. Please upload a CSV or Excel file.")
+            st.error("Formato de arquivo não suportado. Por favor, envie um arquivo CSV ou Excel.")
             return None, None
         
         return data, filename
     except Exception as e:
-        st.error(f"Error loading file: {str(e)}")
-        return None, None
+        st.error(f"Erro ao carregar o arquivo: {str(e)}")
+        st.info("Tentando métodos alternativos de carregamento...")
+        
+        try:
+            # Tentar codificações alternativas para CSV
+            if filename.endswith('.csv'):
+                for encoding in ['latin1', 'ISO-8859-1', 'cp1252']:
+                    try:
+                        data = pd.read_csv(file, encoding=encoding)
+                        st.success(f"Arquivo carregado com sucesso usando codificação {encoding}")
+                        return data, filename
+                    except:
+                        pass
+            
+            return None, None
+        except Exception as e:
+            st.error(f"Falha no carregamento: {str(e)}")
+            return None, None
 
 def get_column_types(df):
     """
